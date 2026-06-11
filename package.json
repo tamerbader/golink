@@ -1,0 +1,12 @@
+{
+  "name": "golink",
+  "version": "1.0.0",
+  "description": "Personal Chrome extension implementing go/ link shortcuts.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "check": "for f in src/*.js test/*.mjs scripts/*.mjs; do node --check \"$f\"; done && node -e \"JSON.parse(require('fs').readFileSync('manifest.json','utf8'))\" && echo OK",
+    "icons": "node scripts/generate-icons.mjs"
+  }
+}
