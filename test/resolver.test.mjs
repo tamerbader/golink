@@ -36,7 +36,7 @@ test('parseInput splits command and rest', () => {
 });
 
 test('parseGoUrl only matches host "go"', () => {
-  assert.deepEqual(parseGoUrl('http://go/calenda'), { command: 'calendar', rest: '' });
+  assert.deepEqual(parseGoUrl('http://go/calendar'), { command: 'calendar', rest: '' });
   assert.deepEqual(parseGoUrl('http://go/gh/my%20query'), { command: 'gh', rest: 'my query' });
   assert.equal(parseGoUrl('https://microsoft.com/calendar'), null);
   assert.equal(parseGoUrl('not a url'), null);
