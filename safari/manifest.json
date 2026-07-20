@@ -9,7 +9,7 @@
     "*://*.google.com/*",
     "*://*.bing.com/*",
     "*://*.duckduckgo.com/*",
-    "*://*.search.yahoo.com/*",
+    "*://search.yahoo.com/*",
     "*://*.ecosia.org/*",
     "*://search.brave.com/*",
     "*://*.startpage.com/*",
