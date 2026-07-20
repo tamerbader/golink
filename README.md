@@ -4,6 +4,9 @@ A personal Chrome extension that brings corporate-style **go links** to your own
 browser. Type `go/calendar` in the address bar and jump straight to
 `https://outlook.cloud.microsoft/calendar` — no server, no DNS tricks, all local.
 
+> **Using Safari?** A Safari Web Extension port with identical features (and
+> fully local, private storage) lives in [`safari/`](safari/README.md).
+
 ## Features
 
 - **`go/{command}` shortcuts** — `go/calendar`, `go/mail`, `go/drive`, etc.
