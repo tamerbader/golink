@@ -2,6 +2,7 @@
 import {
   parseGoUrl,
   parseInput,
+  parseSearchRedirect,
   resolve,
   normalizeName,
   entryUrl,
@@ -86,6 +87,35 @@ chrome.webNavigation.onBeforeNavigate.addListener(
     await chrome.tabs.update(details.tabId, { url });
   },
   { url: [{ hostEquals: 'go' }] }
+);
+
+// --- Rescue accidental "go/foo" web searches ------------------------------
+// If the address bar searched (instead of navigating) for a go-link, catch the
+// search-results navigation and redirect it. Only known shortcuts are rescued,
+// so ordinary searches like "go pro camera" are never hijacked.
+chrome.webNavigation.onBeforeNavigate.addListener(
+  async (details) => {
+    if (details.frameId !== 0) return;
+    const parsed = parseSearchRedirect(details.url);
+    if (!parsed) return;
+    const shortcuts = await getShortcuts();
+    const dest = resolve(parsed.command, parsed.rest, shortcuts);
+    if (!dest || isGoUrl(dest)) return; // unknown shortcut or loop: leave the search alone
+    bumpHits(normalizeName(parsed.command));
+    await chrome.tabs.update(details.tabId, { url: dest });
+  },
+  {
+    url: [
+      { hostContains: '.google.' },
+      { hostSuffix: 'bing.com' },
+      { hostSuffix: 'duckduckgo.com' },
+      { hostSuffix: 'yahoo.com' },
+      { hostSuffix: 'ecosia.org' },
+      { hostSuffix: 'brave.com' },
+      { hostSuffix: 'startpage.com' },
+      { hostSuffix: 'yandex.com' },
+    ],
+  }
 );
 
 // --- Omnibox keyword "go" (fallback) --------------------------------------

@@ -54,6 +54,58 @@ export function parseGoUrl(rawUrl) {
   return parsed;
 }
 
+// Search-result hosts we recognize so an accidental "go/foo" web search can be
+// rescued and turned back into a go-link. Matching is on the registrable-ish
+// host; Google is matched by prefix to cover its many country TLDs.
+const SEARCH_HOSTS = [
+  'google.', // google.com, google.co.uk, google.de, ...
+  'bing.com',
+  'duckduckgo.com',
+  'search.yahoo.com',
+  'ecosia.org',
+  'search.brave.com',
+  'startpage.com',
+  'yandex.com',
+];
+
+function isSearchHost(hostname) {
+  const h = String(hostname || '').toLowerCase().replace(/^www\./, '');
+  return SEARCH_HOSTS.some((s) =>
+    s.endsWith('.') ? h.startsWith(s) || h.includes('.' + s) : h === s || h.endsWith('.' + s)
+  );
+}
+
+/**
+ * Detect a search-engine results URL whose query is really a go-link the user
+ * typed into the address bar (e.g. the browser searched for "go/calendar"
+ * instead of navigating). Returns { command, rest } when the query looks like
+ * `go/<something>` or `go <something>`, otherwise null.
+ *
+ * Note: this only classifies the text as a go-intent. Callers should still
+ * resolve against the shortcuts map and only redirect on a known match, so
+ * legitimate searches such as "go pro camera" are never hijacked.
+ */
+export function parseSearchRedirect(rawUrl) {
+  let u;
+  try {
+    u = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+  if (!isSearchHost(u.hostname)) return null;
+  const q =
+    u.searchParams.get('q') ||
+    u.searchParams.get('query') ||
+    u.searchParams.get('p') ||
+    u.searchParams.get('text');
+  if (!q) return null;
+  // Require an explicit "go" prefix followed by a separator so we only act on
+  // deliberate go-links, never arbitrary searches.
+  const m = q.trim().match(/^go[\s/]+([\s\S]+)$/i);
+  if (!m) return null;
+  return parseInput(m[1]);
+}
+
 /** Append extra path segments to a base URL, preserving its existing path. */
 function appendPath(url, rest) {
   const extra = rest.replace(/^\/+/, '');

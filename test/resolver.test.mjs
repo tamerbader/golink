@@ -5,6 +5,7 @@ import {
   entryUrl,
   parseInput,
   parseGoUrl,
+  parseSearchRedirect,
   resolve,
   resolveText,
   resolveUrl,
@@ -44,6 +45,38 @@ test('parseGoUrl only matches host "go"', () => {
 
 test('parseGoUrl preserves query string as rest', () => {
   assert.deepEqual(parseGoUrl('http://go/gh?foo=bar'), { command: 'gh', rest: 'foo=bar' });
+});
+
+test('parseSearchRedirect catches go-links searched on search engines', () => {
+  assert.deepEqual(
+    parseSearchRedirect('https://www.google.com/search?q=go/calendar'),
+    { command: 'calendar', rest: '' }
+  );
+  assert.deepEqual(
+    parseSearchRedirect('https://www.google.com/search?q=go%2Fgh%2Fmy+query'),
+    { command: 'gh', rest: 'my query' }
+  );
+  // Space form (e.g. "go calendar") and other engines / query params.
+  assert.deepEqual(
+    parseSearchRedirect('https://duckduckgo.com/?q=go%20calendar'),
+    { command: 'calendar', rest: '' }
+  );
+  assert.deepEqual(
+    parseSearchRedirect('https://search.yahoo.com/search?p=go/mail'),
+    { command: 'mail', rest: '' }
+  );
+  assert.deepEqual(
+    parseSearchRedirect('https://google.co.uk/search?q=go/drive'),
+    { command: 'drive', rest: '' }
+  );
+});
+
+test('parseSearchRedirect ignores non-search hosts and non-go queries', () => {
+  assert.equal(parseSearchRedirect('https://example.com/search?q=go/calendar'), null);
+  assert.equal(parseSearchRedirect('https://www.google.com/search?q=golang tutorial'), null);
+  assert.equal(parseSearchRedirect('https://www.google.com/search?q=go'), null);
+  assert.equal(parseSearchRedirect('https://www.google.com/search'), null);
+  assert.equal(parseSearchRedirect('not a url'), null);
 });
 
 test('resolve returns plain URL when no args', () => {

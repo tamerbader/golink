@@ -4,7 +4,17 @@
   "version": "1.0.0",
   "description": "Personal go/ link shortcuts for Safari. Type go/calendar to jump to saved URLs. Shortcuts stay private on this device.",
   "permissions": ["webNavigation", "tabs", "storage"],
-  "host_permissions": ["*://go/*"],
+  "host_permissions": [
+    "*://go/*",
+    "*://*.google.com/*",
+    "*://*.bing.com/*",
+    "*://*.duckduckgo.com/*",
+    "*://*.search.yahoo.com/*",
+    "*://*.ecosia.org/*",
+    "*://search.brave.com/*",
+    "*://*.startpage.com/*",
+    "*://*.yandex.com/*"
+  ],
   "background": {
     "service_worker": "src/background.js",
     "type": "module",

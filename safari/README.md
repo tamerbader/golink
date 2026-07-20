@@ -20,6 +20,12 @@ Identical to the Chrome extension:
 - **Quick add** — click the toolbar icon to save the current tab as a go link.
 - **Manage shortcuts** — full add / edit / delete / search UI with JSON
   import & export.
+- **Search rescue** — if Safari *searches* for `go/calendar` instead of
+  navigating, the extension catches that search on major engines (Google, Bing,
+  DuckDuckGo, Yahoo, Ecosia, Brave, Startpage, Yandex) and redirects it to the
+  real destination. Only shortcuts you've saved are rescued, so ordinary
+  searches like `go pro camera` are never touched. This is what makes typing
+  `go/calendar` work on Safari, which has no omnibox keyword.
 - **Local, private storage** — shortcuts live in `storage.local`; they never
   leave your Mac.
 - **Omnibox keyword** — the `go` keyword handler ships in the code and activates
@@ -79,31 +85,46 @@ converter that turns this Web Extension folder into an Xcode project.
 | `go/unknown` | Opens the manager with `unknown` pre-filled to create it |
 | `go` | Opens the shortcut manager |
 
-The extension works by intercepting Safari's attempt to load the host **`go`**
-and redirecting it. Because `go/calendar` contains a slash, Safari usually
-treats it as a URL. If Safari searches instead, pick the URL option once and it
-will autocomplete `go/...` as a URL from then on.
+The extension works two ways. First, it intercepts Safari's attempt to load the
+host **`go`** and redirects it. Second — and this is the important one for
+Safari — if Safari **searches** for `go/calendar` instead of navigating, the
+extension catches that search on the major search engines and redirects it to
+your saved destination. Because Safari has no omnibox keyword, this search rescue
+is what makes typing `go/calendar` reliably reach your shortcut.
+
+> **Getting a search instead of your shortcut?** Make sure (a) you've actually
+> saved that shortcut in the Options page (it starts empty), and (b) you granted
+> the extension **website access** — enable it under **Safari → Settings →
+> Extensions**, then choose **Always Allow** so it can read the search page and
+> redirect. Only shortcuts you've saved are rescued; real searches are left
+> alone.
 
 ## Safari limitations
 
 - **Omnibox keyword (`go` + Space):** Safari does not implement the
   `browser.omnibox` API, so the keyword-suggestion fallback that Chrome offers
   is unavailable in Safari. The code registers the handler only when the API
-  exists (feature-detected), so the extension loads cleanly and the core
-  `go/{command}` address-bar redirect works exactly as it does in Chrome. If a
-  future Safari version adds omnibox support, the keyword will start working
-  with no code changes.
+  exists (feature-detected), so the extension loads cleanly. The
+  `go/{command}` address-bar redirect and the search-rescue fallback both work
+  without it. If a future Safari version adds omnibox support, the keyword will
+  start working with no code changes.
+- **Search engines & Google TLDs:** search rescue only fires on the engines the
+  extension has host permission for (see `manifest.json`), and Google is granted
+  for `google.com`. If you use a non-`.com` Google domain or another engine, add
+  its host to `host_permissions` in `safari/manifest.json` and re-convert.
 
 ## How it works
 
 Same architecture as the Chrome extension, with two Safari-specific changes:
 
 - `src/resolver.js` — pure, dependency-free resolution logic (parse + `%s`
-  substitution + path append). Shared, unchanged, and unit-tested.
+  substitution + path append + search-URL detection). Shared, unchanged, and
+  unit-tested.
 - `src/background.js` — MV3 background service worker. Listens to
   `webNavigation.onBeforeNavigate` for the `go` host and redirects via
-  `tabs.update`. Uses `storage.local` (private) instead of `storage.sync`, and
-  guards the omnibox registration behind feature detection.
+  `tabs.update`, and also watches search-engine result pages to rescue
+  accidental `go/...` searches. Uses `storage.local` (private) instead of
+  `storage.sync`, and guards the omnibox registration behind feature detection.
 - `options.html` / `src/options.js` — management UI (reads/writes
   `storage.local`).
 - `popup.html` / `src/popup.js` — quick-add popup (reads/writes
