@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Go Links</title>
+    <style>
+      :root { --accent: #2563eb; --bg: #0f172a; --panel: #1e293b; --text: #e2e8f0; --muted: #94a3b8; --border: #334155; }
+      * { box-sizing: border-box; }
+      body { margin: 0; width: 320px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+      header { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+      .logo { background: var(--accent); color: #fff; font-weight: 700; padding: 2px 6px; border-radius: 6px; font-family: ui-monospace, monospace; }
+      header h1 { font-size: 14px; margin: 0; font-weight: 600; }
+      main { padding: 14px; display: grid; gap: 10px; }
+      label { font-size: 12px; color: var(--muted); }
+      .url { font-size: 12px; color: var(--muted); word-break: break-all; background: #273449; padding: 8px; border-radius: 8px; }
+      .name-input { display: flex; }
+      .name-input .prefix { background: #273449; border: 1px solid var(--border); border-right: none; border-radius: 8px 0 0 8px; padding: 8px; color: var(--muted); font-family: ui-monospace, monospace; }
+      .name-input input { flex: 1; border-radius: 0 8px 8px 0; }
+      input { background: #273449; border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px; font-size: 14px; outline: none; }
+      input:focus { border-color: var(--accent); }
+      .row { display: flex; gap: 8px; }
+      button { flex: 1; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 9px; font-size: 14px; cursor: pointer; }
+      button.secondary { background: #273449; border: 1px solid var(--border); color: var(--text); }
+      .status { font-size: 12px; color: #34d399; min-height: 16px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span class="logo">go/</span>
+      <h1>Save this page as a go link</h1>
+    </header>
+    <main>
+      <div>
+        <label>Current page</label>
+        <div id="current-url" class="url">…</div>
+      </div>
+      <div>
+        <label for="name">Shortcut name</label>
+        <div class="name-input"><span class="prefix">go/</span><input id="name" placeholder="calendar" autocomplete="off" /></div>
+      </div>
+      <div class="status" id="status"></div>
+      <div class="row">
+        <button id="save">Save</button>
+        <button id="manage" class="secondary">Manage all</button>
+      </div>
+    </main>
+    <script type="module" src="src/popup.js"></script>
+  </body>
+</html>

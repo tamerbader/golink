@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Go Links — Manage shortcuts</title>
+    <link rel="stylesheet" href="src/options.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo">go/</span>
+        <h1>Go Links</h1>
+      </div>
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Filter shortcuts…" autocomplete="off" />
+        <button id="export" class="btn">Export</button>
+        <button id="import" class="btn">Import</button>
+        <input id="import-file" type="file" accept="application/json" hidden />
+      </div>
+    </header>
+
+    <main>
+      <section class="card add-card">
+        <h2>Add a shortcut</h2>
+        <form id="add-form" class="add-form" autocomplete="off">
+          <div class="field name-field">
+            <label for="name">Shortcut</label>
+            <div class="name-input"><span class="prefix">go/</span><input id="name" name="name" placeholder="calendar" required /></div>
+          </div>
+          <div class="field url-field">
+            <label for="url">Destination URL</label>
+            <input id="url" name="url" type="text" placeholder="https://outlook.cloud.microsoft/calendar" required />
+          </div>
+          <button type="submit" class="btn primary">Add</button>
+        </form>
+        <p class="hint">
+          Tip: include <code>%s</code> in the URL to pass arguments, e.g.
+          <code>https://github.com/search?q=%s</code> lets you type
+          <code>go/gh/my query</code>.
+        </p>
+      </section>
+
+      <section class="card">
+        <table id="table">
+          <thead>
+            <tr>
+              <th>Shortcut</th>
+              <th>Destination</th>
+              <th class="hits">Hits</th>
+              <th class="actions"></th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <p id="empty" class="empty" hidden>No shortcuts yet. Add one above.</p>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" hidden></div>
+    <script type="module" src="src/options.js"></script>
+  </body>
+</html>

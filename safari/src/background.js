@@ -1,4 +1,6 @@
-// Service worker: wires storage + go/ navigation interception + omnibox.
+// Safari service worker: wires storage + go/ navigation interception + omnibox.
+// Mirrors the Chrome background, but stores shortcuts privately in
+// storage.local (never synced) and feature-detects Safari-unsupported APIs.
 import {
   parseGoUrl,
   parseInput,
@@ -8,33 +10,28 @@ import {
   entryUrl,
 } from './resolver.js';
 
+// Safari exposes the promise-based `browser` namespace; Chromium exposes
+// `chrome`. Using whichever is present keeps this file identical across both.
+const api = globalThis.browser ?? globalThis.chrome;
+
 // In-memory cache so the navigation handler can resolve without awaiting
-// storage on the hot path; kept in sync via chrome.storage.onChanged.
+// storage on the hot path; kept in sync via storage.onChanged.
 let cache = null;
 
 async function getShortcuts() {
   if (cache) return cache;
-  try {
-    const { shortcuts } = await chrome.storage.sync.get('shortcuts');
-    cache = shortcuts || {};
-  } catch {
-    const { shortcuts } = await chrome.storage.local.get('shortcuts');
-    cache = shortcuts || {};
-  }
+  const { shortcuts } = await api.storage.local.get('shortcuts');
+  cache = shortcuts || {};
   return cache;
 }
 
 async function setShortcuts(shortcuts) {
   cache = shortcuts;
-  try {
-    await chrome.storage.sync.set({ shortcuts });
-  } catch {
-    await chrome.storage.local.set({ shortcuts });
-  }
+  await api.storage.local.set({ shortcuts });
 }
 
-chrome.storage.onChanged.addListener((changes, area) => {
-  if ((area === 'sync' || area === 'local') && changes.shortcuts) {
+api.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.shortcuts) {
     cache = changes.shortcuts.newValue || {};
   }
 });
@@ -43,7 +40,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 getShortcuts();
 
 function optionsUrl(prefill) {
-  const base = chrome.runtime.getURL('options.html');
+  const base = api.runtime.getURL('options.html');
   return prefill ? `${base}?add=${encodeURIComponent(prefill)}` : base;
 }
 
@@ -77,23 +74,24 @@ async function destinationFor(command, rest) {
 }
 
 // --- go/{command} navigation interception ---------------------------------
-chrome.webNavigation.onBeforeNavigate.addListener(
+api.webNavigation.onBeforeNavigate.addListener(
   async (details) => {
     if (details.frameId !== 0) return;
     const parsed = parseGoUrl(details.url);
     if (!parsed) return;
     const { url, matched, name } = await destinationFor(parsed.command, parsed.rest);
     if (matched) bumpHits(name);
-    await chrome.tabs.update(details.tabId, { url });
+    await api.tabs.update(details.tabId, { url });
   },
   { url: [{ hostEquals: 'go' }] }
 );
 
 // --- Rescue accidental "go/foo" web searches ------------------------------
 // If the address bar searched (instead of navigating) for a go-link, catch the
-// search-results navigation and redirect it. Only known shortcuts are rescued,
-// so ordinary searches like "go pro camera" are never hijacked.
-chrome.webNavigation.onBeforeNavigate.addListener(
+// search-results navigation and redirect it. This is the primary way go-links
+// work on Safari, which has no omnibox keyword. Only known shortcuts are
+// rescued, so ordinary searches like "go pro camera" are never hijacked.
+api.webNavigation.onBeforeNavigate.addListener(
   async (details) => {
     if (details.frameId !== 0) return;
     const parsed = parseSearchRedirect(details.url);
@@ -102,7 +100,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(
     const dest = resolve(parsed.command, parsed.rest, shortcuts);
     if (!dest || isGoUrl(dest)) return; // unknown shortcut or loop: leave the search alone
     bumpHits(normalizeName(parsed.command));
-    await chrome.tabs.update(details.tabId, { url: dest });
+    await api.tabs.update(details.tabId, { url: dest });
   },
   {
     url: [
@@ -119,6 +117,9 @@ chrome.webNavigation.onBeforeNavigate.addListener(
 );
 
 // --- Omnibox keyword "go" (fallback) --------------------------------------
+// Safari does not implement the omnibox API. Feature-detect so the extension
+// still loads and the go/ redirect keeps working on Safari; on browsers that
+// support omnibox (or future Safari versions) the keyword works as usual.
 function escapeXml(s) {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -128,39 +129,41 @@ function escapeXml(s) {
     .replace(/'/g, '&apos;');
 }
 
-chrome.omnibox.setDefaultSuggestion({
-  description: 'Go link — type a shortcut name (e.g. calendar)',
-});
+if (api.omnibox) {
+  api.omnibox.setDefaultSuggestion({
+    description: 'Go link — type a shortcut name (e.g. calendar)',
+  });
 
-chrome.omnibox.onInputChanged.addListener(async (text, suggest) => {
-  const shortcuts = await getShortcuts();
-  const { command, rest } = parseInput(text);
-  const q = normalizeName(command);
-  const names = Object.keys(shortcuts).sort();
-  const ranked = names
-    .filter((n) => !q || n.includes(q))
-    .sort((a, b) => (a.startsWith(q) === b.startsWith(q) ? 0 : a.startsWith(q) ? -1 : 1))
-    .slice(0, 8);
-  suggest(
-    ranked.map((n) => ({
-      // Preserve typed args so selecting a suggestion keeps them.
-      content: rest ? `${n} ${rest}` : n,
-      description: `go/${escapeXml(n)} — ${escapeXml(entryUrl(shortcuts[n]))}`,
-    }))
-  );
-});
+  api.omnibox.onInputChanged.addListener(async (text, suggest) => {
+    const shortcuts = await getShortcuts();
+    const { command, rest } = parseInput(text);
+    const q = normalizeName(command);
+    const names = Object.keys(shortcuts).sort();
+    const ranked = names
+      .filter((n) => !q || n.includes(q))
+      .sort((a, b) => (a.startsWith(q) === b.startsWith(q) ? 0 : a.startsWith(q) ? -1 : 1))
+      .slice(0, 8);
+    suggest(
+      ranked.map((n) => ({
+        // Preserve typed args so selecting a suggestion keeps them.
+        content: rest ? `${n} ${rest}` : n,
+        description: `go/${escapeXml(n)} — ${escapeXml(entryUrl(shortcuts[n]))}`,
+      }))
+    );
+  });
 
-chrome.omnibox.onInputEntered.addListener(async (text, disposition) => {
-  const { command, rest } = parseInput(text);
-  const { url, matched, name } = await destinationFor(command, rest);
-  if (matched) bumpHits(name);
-  if (disposition === 'newForegroundTab') {
-    await chrome.tabs.create({ url });
-  } else if (disposition === 'newBackgroundTab') {
-    await chrome.tabs.create({ url, active: false });
-  } else {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab) await chrome.tabs.update(tab.id, { url });
-    else await chrome.tabs.create({ url });
-  }
-});
+  api.omnibox.onInputEntered.addListener(async (text, disposition) => {
+    const { command, rest } = parseInput(text);
+    const { url, matched, name } = await destinationFor(command, rest);
+    if (matched) bumpHits(name);
+    if (disposition === 'newForegroundTab') {
+      await api.tabs.create({ url });
+    } else if (disposition === 'newBackgroundTab') {
+      await api.tabs.create({ url, active: false });
+    } else {
+      const [tab] = await api.tabs.query({ active: true, currentWindow: true });
+      if (tab) await api.tabs.update(tab.id, { url });
+      else await api.tabs.create({ url });
+    }
+  });
+}

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Go Links",
   "version": "1.0.0",
-  "description": "Personal go/ link shortcuts. Type go/calendar (or omnibox: go + Space + calendar) to jump to saved URLs.",
+  "description": "Personal go/ link shortcuts for Safari. Type go/calendar to jump to saved URLs. Shortcuts stay private on this device.",
   "permissions": ["webNavigation", "tabs", "storage"],
   "host_permissions": [
     "*://go/*",
@@ -17,7 +17,8 @@
   ],
   "background": {
     "service_worker": "src/background.js",
-    "type": "module"
+    "type": "module",
+    "persistent": false
   },
   "omnibox": {
     "keyword": "go"
