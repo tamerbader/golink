@@ -1,6 +1,6 @@
 # Go Links
 
-A personal Chrome extension that brings corporate-style **go links** to your own
+A personal Chrome extension that brings corporate style **go links** to your own
 browser. Type `go/calendar` in the address bar and jump straight to
 `https://outlook.cloud.microsoft/calendar` — no server, no DNS tricks, all local.
 
